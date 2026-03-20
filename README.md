@@ -39,6 +39,25 @@ Use the top-level Compose stack to run OFBiz and the AI service together.
 7. Test a forecast:
    - `POST http://localhost:8000/predict-demand`
 
+## Fresh Machine
+Fastest path from a clean machine:
+
+1. Clone the repo:
+   - `git clone https://github.com/Anish17-Shanu/ofbiz-ai-demand.git`
+2. Move into the project:
+   - `cd ofbiz-ai-demand`
+3. Start the stack:
+   - `docker-compose up --build`
+
+Then:
+- Open `https://localhost:8443/catalog/control/main`
+- Log in with `admin` / `ofbiz`
+- Open `https://localhost:8443/catalog/control/runDemandExport`
+- Reload the AI service:
+  - `Invoke-RestMethod -Method Post -Uri "http://localhost:8000/reload" -Headers @{ "X-API-Key" = "change-me" }`
+- Test the AI service:
+  - `Invoke-RestMethod "http://localhost:8000/health"`
+
 ## Production Quick Start
 1. Copy `.env.example` to `.env` and set `AI_API_KEY`.
 2. Run:

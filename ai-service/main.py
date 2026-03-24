@@ -141,9 +141,10 @@ async def request_context(request: Request, call_next):
     return response
 
 
-@app.on_event("startup")
-def startup():
+def ensure_model_loaded(force_reload: bool = False) -> DemandModel | None:
     global MODEL
+    if MODEL is not None and not force_reload:
+        return MODEL
     logger.info("Loading demand model from %s", DATA_BASE)
     try:
         MODEL = load_model(DATA_BASE, window=WINDOW_DAYS, model_version=MODEL_VERSION)
@@ -151,6 +152,12 @@ def startup():
     except Exception as exc:
         logger.exception("Failed to load model: %s", exc)
         MODEL = None
+    return MODEL
+
+
+@app.on_event("startup")
+def startup():
+    ensure_model_loaded()
 
 
 @app.get("/")
@@ -165,49 +172,51 @@ def root():
 
 @app.post("/predict-demand", response_model=PredictResponse, dependencies=[Depends(require_api_key)])
 def predict(req: PredictRequest):
-    if MODEL is None:
+    model = ensure_model_loaded()
+    if model is None:
         raise HTTPException(status_code=503, detail="Model not available")
-    result = MODEL.predict(req.product_id, req.horizon_days)
+    result = model.predict(req.product_id, req.horizon_days)
     return PredictResponse(**result)
 
 
 @app.post("/predict-demand/batch", response_model=PredictBatchResponse, dependencies=[Depends(require_api_key)])
 def predict_batch(req: PredictBatchRequest):
-    if MODEL is None:
+    model = ensure_model_loaded()
+    if model is None:
         raise HTTPException(status_code=503, detail="Model not available")
-    results = MODEL.predict_batch(req.product_ids, req.horizon_days)
+    results = model.predict_batch(req.product_ids, req.horizon_days)
     return PredictBatchResponse(results=[PredictResponse(**item) for item in results])
 
 
 @app.get("/metadata", response_model=MetadataResponse, dependencies=[Depends(require_api_key)])
 def metadata():
-    if MODEL is None or not MODEL.metadata:
+    model = ensure_model_loaded()
+    if model is None or not model.metadata:
         raise HTTPException(status_code=503, detail="Model metadata unavailable")
-    return MetadataResponse(**MODEL.metadata.__dict__)
+    return MetadataResponse(**model.metadata.__dict__)
 
 
 @app.post("/reload", dependencies=[Depends(require_api_key)])
 def reload_model():
-    global MODEL
-    try:
-        MODEL = load_model(DATA_BASE, window=WINDOW_DAYS, model_version=MODEL_VERSION)
-    except Exception as exc:
-        logger.exception("Reload failed: %s", exc)
-        raise HTTPException(status_code=503, detail="Model reload failed") from exc
+    model = ensure_model_loaded(force_reload=True)
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model reload failed")
     return {"status": "reloaded", "model_loaded": MODEL is not None}
 
 
 @app.get("/evaluation", response_model=EvaluationResponse, dependencies=[Depends(require_api_key)])
 def evaluation(eval_days: int = 30):
-    if MODEL is None:
+    model = ensure_model_loaded()
+    if model is None:
         raise HTTPException(status_code=503, detail="Model not available")
-    result = MODEL.evaluate(eval_days=eval_days)
+    result = model.evaluate(eval_days=eval_days)
     return EvaluationResponse(**result)
 
 
 @app.get("/health")
 def health():
-    healthy = MODEL is not None and MODEL.metadata is not None
+    model = ensure_model_loaded()
+    healthy = model is not None and model.metadata is not None
     return {
         "status": "ok" if healthy else "degraded",
         "model_loaded": healthy,

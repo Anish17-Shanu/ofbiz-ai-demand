@@ -11,7 +11,7 @@ from typing import Deque, List
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, conint
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, Histogram, generate_latest
 
 from model import DemandModel, load_model
 
@@ -30,8 +30,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ai-demand")
 
-REQUEST_COUNT = Counter("ai_requests_total", "Total API requests", ["path", "method", "status"])
-REQUEST_LATENCY = Histogram("ai_request_latency_seconds", "Request latency", ["path", "method"])
+METRICS_REGISTRY = CollectorRegistry()
+REQUEST_COUNT = Counter(
+    "ai_requests_total",
+    "Total API requests",
+    ["path", "method", "status"],
+    registry=METRICS_REGISTRY,
+)
+REQUEST_LATENCY = Histogram(
+    "ai_request_latency_seconds",
+    "Request latency",
+    ["path", "method"],
+    registry=METRICS_REGISTRY,
+)
 RATE_BUCKETS: dict[str, Deque[float]] = defaultdict(deque)
 
 
@@ -41,7 +52,7 @@ class PredictRequest(BaseModel):
 
 
 class PredictBatchRequest(BaseModel):
-    product_ids: List[str] = Field(..., alias="product_ids", min_items=1)
+    product_ids: List[str] = Field(..., alias="product_ids", min_length=1)
     horizon_days: conint(ge=1, le=MAX_HORIZON_DAYS) = 14
 
 
@@ -208,5 +219,5 @@ def health():
 
 @app.get("/metrics")
 def metrics():
-    data = generate_latest()
+    data = generate_latest(METRICS_REGISTRY)
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)

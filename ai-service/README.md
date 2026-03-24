@@ -16,6 +16,7 @@ Quick start
 1) Create/activate a venv (Python 3.10+ recommended).
 2) `pip install -r requirements.txt`
 3) `uvicorn main:app --reload --port 8000`
+4) Optional for tests: `pip install -r requirements-dev.txt`
 
 Usage example (after server is running)
 ```
@@ -40,8 +41,25 @@ Configuration (env vars)
 - `AI_MODEL_VERSION` (default: 0.1.0)
 - `AI_API_KEY` (optional; if set, required via `X-API-Key`)
 - `AI_RATE_LIMIT_PER_MIN` (optional; if set > 0, rate limit per IP)
+- `LOG_LEVEL` (default: `INFO`)
+
+Bootstrap from env file:
+```bash
+copy .env.example .env
+```
 
 Evaluation
+```
+
+Health and metadata
+```
+curl http://localhost:8000/health
+curl -H "X-API-Key: <your-key>" http://localhost:8000/metadata
+```
+
+Testing
+```
+pytest
 ```
 curl -X GET "http://localhost:8000/evaluation?eval_days=30" \
   -H "X-API-Key: <your-key>"

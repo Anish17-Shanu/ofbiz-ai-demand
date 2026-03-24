@@ -85,6 +85,8 @@ class EvaluationResponse(BaseModel):
     samples: int
 
 
+MODEL = None
+
 app = FastAPI(title="AI Demand Service", version=MODEL_VERSION)
 
 
@@ -140,6 +142,16 @@ def startup():
         MODEL = None
 
 
+@app.get("/")
+def root():
+    return {
+        "service": "ai-demand-service",
+        "version": MODEL_VERSION,
+        "health": "/health",
+        "metadata": "/metadata",
+    }
+
+
 @app.post("/predict-demand", response_model=PredictResponse, dependencies=[Depends(require_api_key)])
 def predict(req: PredictRequest):
     if MODEL is None:
@@ -166,8 +178,12 @@ def metadata():
 @app.post("/reload", dependencies=[Depends(require_api_key)])
 def reload_model():
     global MODEL
-    MODEL = load_model(DATA_BASE, window=WINDOW_DAYS, model_version=MODEL_VERSION)
-    return {"status": "reloaded"}
+    try:
+        MODEL = load_model(DATA_BASE, window=WINDOW_DAYS, model_version=MODEL_VERSION)
+    except Exception as exc:
+        logger.exception("Reload failed: %s", exc)
+        raise HTTPException(status_code=503, detail="Model reload failed") from exc
+    return {"status": "reloaded", "model_loaded": MODEL is not None}
 
 
 @app.get("/evaluation", response_model=EvaluationResponse, dependencies=[Depends(require_api_key)])
@@ -184,6 +200,9 @@ def health():
     return {
         "status": "ok" if healthy else "degraded",
         "model_loaded": healthy,
+        "data_base": str(DATA_BASE),
+        "window_days": WINDOW_DAYS,
+        "max_horizon_days": MAX_HORIZON_DAYS,
     }
 
 

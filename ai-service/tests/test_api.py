@@ -40,3 +40,23 @@ def test_predict_endpoint(tmp_path: pathlib.Path, monkeypatch):
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] > 0
+
+
+def test_health_endpoint(tmp_path: pathlib.Path, monkeypatch):
+    export_dir = tmp_path / "ofbiz-framework" / "runtime" / "data" / "export"
+    export_dir.mkdir(parents=True)
+    write_order_lines(export_dir / "order_lines.csv")
+
+    monkeypatch.setenv("AI_OFBIZ_BASE_DIR", str(tmp_path / "ofbiz-framework"))
+    monkeypatch.setenv("AI_API_KEY", "test-key")
+
+    import main
+
+    importlib.reload(main)
+    client = TestClient(main.app)
+
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["model_loaded"] is True
+    assert payload["status"] == "ok"

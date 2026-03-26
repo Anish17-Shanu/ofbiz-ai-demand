@@ -1,6 +1,11 @@
 # OFBiz AI Demand Forecasting
 
-This repo integrates Apache OFBiz with a production‑ready AI demand forecasting service. It includes:
+## Creator
+
+This project was created, written, and maintained by **Anish Kumar (ANISH KUMAR)**.
+All primary documentation in this README is presented as the work of **Anish Kumar**.
+
+This repo integrates Apache OFBiz with a productionâ€‘ready AI demand forecasting service. It includes:
 
 - OFBiz export services to generate CSVs from order, product, facility, and inventory data
 - A FastAPI microservice that forecasts demand with confidence intervals and inventory context
@@ -94,7 +99,7 @@ Catalog app menu:
 - `Forecast Dashboard`: `/catalog/control/demandForecastDashboard`
 
 ## Scheduled Jobs
-Seed‑initial jobs:
+Seedâ€‘initial jobs:
 - `exportDemandDataDelta` (daily)
 - `predictDemandForAllProducts` (daily)
 
@@ -103,7 +108,7 @@ See `docs/production.md` for full production guidance and migration steps.
 
 ## Complete Usage + Deployment Guide
 
-This section is a full, end‑to‑end guide to make the project work in dev or production.
+This section is a full, endâ€‘toâ€‘end guide to make the project work in dev or production.
 
 ### 1) Prerequisites
 - JDK 17 (for OFBiz)
@@ -111,7 +116,7 @@ This section is a full, end‑to‑end guide to make the project work in dev or 
 - Docker + Docker Compose (production or local container run)
 - A database supported by OFBiz (PostgreSQL/MySQL/etc.)
 
-### 2) OFBiz Setup (First‑Time)
+### 2) OFBiz Setup (Firstâ€‘Time)
 Follow the official OFBiz setup steps from `ofbiz-framework/README.adoc`. At minimum:
 1. Initialize Gradle wrapper:
    - Windows: `init-gradle-wrapper`
@@ -139,7 +144,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-### 5) Configure OFBiz → AI Service
+### 5) Configure OFBiz â†’ AI Service
 Set JVM properties when starting OFBiz:
 - `-Dai.demand.url=http://localhost:8000`
 - `-Dai.demand.apiKey=<your-key>`
@@ -158,7 +163,7 @@ gradlew "ofbiz --script=runtime/script/upgradeDemandForecast.groovy"
 ```
 
 Or from UI:
-- Catalog app → `Demand Forecasts`
+- Catalog app â†’ `Demand Forecasts`
 - Click `Queue Forecasts`
 
 ### 7) View Results
@@ -207,7 +212,7 @@ Enable webhook alerts via JVM properties:
 - `-Dai.demand.alertIntervalHighThreshold=0`
 
 ### 13) Common Failure Points
-- Missing schema migration → forecast writes fail.
-- AI service down → OFBiz falls back to cached forecasts.
-- Wrong API key → 401 errors.
-- No exports → AI service loads empty data.
+- Missing schema migration â†’ forecast writes fail.
+- AI service down â†’ OFBiz falls back to cached forecasts.
+- Wrong API key â†’ 401 errors.
+- No exports â†’ AI service loads empty data.

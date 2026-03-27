@@ -5,6 +5,7 @@ import org.apache.ofbiz.service.DispatchContext
 import org.apache.ofbiz.base.util.UtilDateTime
 import org.apache.ofbiz.base.util.Debug
 
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.sql.Timestamp
 
@@ -100,9 +101,14 @@ Map exportOrderLinesForDemand(DispatchContext dctx, Map context) {
                 }
     }
 
+    int originalCount = rows.size()
+    if (isDemoSeedEnabled()) {
+        rows.addAll(buildDemoDemandRows(daysBack))
+    }
+
     writeCsv("order_lines.csv", ["orderId", "orderDate", "productId", "quantity", "facilityId"], rows)
-    Debug.logInfo("Exported ${rows.size()} order lines for demand data", "AI_DEMAND")
-    return [responseMessage: "success", exported: rows.size()]
+    Debug.logInfo("Exported ${rows.size()} order lines for demand data (${rows.size() - originalCount} seeded demo rows)", "AI_DEMAND")
+    return [responseMessage: "success", exported: rows.size(), originalExported: originalCount, demoSeeded: rows.size() - originalCount]
 }
 
 Map exportProductsForDemand() {
@@ -146,6 +152,9 @@ Map exportProductFacilityForDemand(DispatchContext dctx, Map context) {
                 ""
         ]
     }
+    if (isDemoSeedEnabled()) {
+        upsertDemoProductFacilityRows(rows)
+    }
     writeCsv("product_facility.csv", ["productId", "facilityId", "minimumStock", "reorderQuantity", "lastInventoryCountDate"], rows)
     Debug.logInfo("Exported ${rows.size()} product facility rows for demand data", "AI_DEMAND")
     return [responseMessage: "success", exported: rows.size()]
@@ -182,6 +191,79 @@ private void writeCsv(String filename, List<String> headers, List<List<String>> 
         out.append(cols.collect { sanitize(it) }.join(",")).append("\n")
     }
     outFile.text = out.toString()
+}
+
+private List<List<String>> buildDemoDemandRows(Integer requestedDaysBack) {
+    int totalDays = Math.max((requestedDaysBack ?: 0) as Integer, 180)
+    LocalDate today = LocalDate.now()
+    List<List<String>> rows = []
+
+    demoProductProfiles().eachWithIndex { profile, productIndex ->
+        (0..<totalDays).each { offset ->
+            LocalDate orderDate = today.minusDays(totalDays - offset)
+            int quantity = calculateDemoQuantity(profile, orderDate, offset, productIndex)
+            rows << [
+                    "DEMO-${profile.productId}-${orderDate.format(DateTimeFormatter.BASIC_ISO_DATE)}",
+                    orderDate.toString(),
+                    profile.productId,
+                    quantity.toString(),
+                    profile.facilityId
+            ]
+        }
+    }
+
+    return rows
+}
+
+private int calculateDemoQuantity(Map profile, LocalDate orderDate, int offset, int productIndex) {
+    int weeklyPattern = (((offset + productIndex) % 7) in [4, 5]) ? profile.weeklySwing as Integer : 0
+    int paydayLift = (orderDate.dayOfMonth in [1, 14, 15, 28]) ? 2 : 0
+    int campaignLift = ((offset + productIndex * 3) % 29 == 0) ? 4 : 0
+    double trend = offset * (profile.trendFactor as BigDecimal)
+    int quantity = Math.round((profile.baseDemand as Integer) + weeklyPattern + paydayLift + campaignLift + trend)
+    return Math.max(profile.floor as Integer, quantity)
+}
+
+private void upsertDemoProductFacilityRows(List<List<String>> rows) {
+    Set<String> existing = rows.collect { "${it[0]}::${it[1]}" }.toSet()
+    demoProductProfiles().each { profile ->
+        List<String> demoRow = [
+                profile.productId,
+                profile.facilityId,
+                formatWholeNumber(profile.minimumStock),
+                formatWholeNumber(profile.reorderQuantity),
+                ""
+        ]
+        String key = "${profile.productId}::${profile.facilityId}"
+        int rowIndex = rows.findIndexOf { it[0] == profile.productId && it[1] == profile.facilityId }
+        if (rowIndex >= 0) {
+            rows[rowIndex] = demoRow
+        } else if (!existing.contains(key)) {
+            rows << demoRow
+        }
+    }
+}
+
+private boolean isDemoSeedEnabled() {
+    return !System.getProperty("ai.demand.demoSeed", "true").equalsIgnoreCase("false")
+}
+
+private List<Map> demoProductProfiles() {
+    return [
+            [productId: "GZ-2644", facilityId: "WebStoreWarehouse", baseDemand: 9, weeklySwing: 3, trendFactor: 0.025, floor: 4, minimumStock: 12, reorderQuantity: 30],
+            [productId: "GZ-8544", facilityId: "WebStoreWarehouse", baseDemand: 6, weeklySwing: 3, trendFactor: 0.018, floor: 3, minimumStock: 24, reorderQuantity: 60],
+            [productId: "WG-1111", facilityId: "WebStoreWarehouse", baseDemand: 7, weeklySwing: 2, trendFactor: 0.020, floor: 3, minimumStock: 10, reorderQuantity: 28],
+            [productId: "WG-5569", facilityId: "WebStoreWarehouse", baseDemand: 5, weeklySwing: 2, trendFactor: 0.022, floor: 2, minimumStock: 28, reorderQuantity: 70],
+            [productId: "WG-9943-B3", facilityId: "WebStoreWarehouse", baseDemand: 4, weeklySwing: 2, trendFactor: 0.016, floor: 2, minimumStock: 18, reorderQuantity: 36],
+            [productId: "WG-9943-B4", facilityId: "WebStoreWarehouse", baseDemand: 4, weeklySwing: 2, trendFactor: 0.017, floor: 2, minimumStock: 18, reorderQuantity: 36],
+            [productId: "GZ-1000", facilityId: "WebStoreWarehouse", baseDemand: 3, weeklySwing: 1, trendFactor: 0.015, floor: 1, minimumStock: 14, reorderQuantity: 30],
+            [productId: "GZ-1001", facilityId: "WebStoreWarehouse", baseDemand: 2, weeklySwing: 1, trendFactor: 0.012, floor: 1, minimumStock: 12, reorderQuantity: 24]
+    ]
+}
+
+private String formatWholeNumber(Object value) {
+    if (value == null) return ""
+    return new BigDecimal(value.toString()).setScale(6, BigDecimal.ROUND_HALF_UP).toPlainString()
 }
 
 private String sanitize(Object value) {

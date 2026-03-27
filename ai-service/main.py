@@ -47,12 +47,12 @@ RATE_BUCKETS: dict[str, Deque[float]] = defaultdict(deque)
 
 
 class PredictRequest(BaseModel):
-    product_id: str = Field(..., alias="product_id", min_length=1, max_length=50)
+    product_id: str = Field(..., min_length=1, max_length=50)
     horizon_days: conint(ge=1, le=MAX_HORIZON_DAYS) = 14
 
 
 class PredictBatchRequest(BaseModel):
-    product_ids: List[str] = Field(..., alias="product_ids", min_length=1)
+    product_ids: List[str] = Field(..., min_length=1)
     horizon_days: conint(ge=1, le=MAX_HORIZON_DAYS) = 14
 
 

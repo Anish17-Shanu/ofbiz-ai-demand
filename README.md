@@ -1,218 +1,206 @@
 # OFBiz AI Demand Forecasting
 
-## Creator
+Customized Apache OFBiz demand forecasting project by **Anish Kumar**.
 
-This project was created, written, and maintained by **Anish Kumar**.
-All primary documentation in this README is presented as the work of **Anish Kumar**.
+This repository combines a customized OFBiz application with a Python forecasting microservice so anyone can clone the repo, run it locally, and see demand forecasting screens, dashboard views, and seeded demo forecast data.
 
-This repo integrates Apache OFBiz with a productionÃ¢â‚¬â€˜ready AI demand forecasting service. It includes:
+## Author
 
-- OFBiz export services to generate CSVs from order, product, facility, and inventory data
-- A FastAPI microservice that forecasts demand with confidence intervals and inventory context
-- OFBiz services that call the AI service and store results in `DemandForecast`
-- Scheduled jobs, UI screens, dashboards, and alerting hooks
+**Anish Kumar**  
+Creator and maintainer of this project.
 
-## Architecture
-1. OFBiz exports data to `ofbiz-framework/runtime/data/export/*.csv`
-2. AI service loads exports and serves forecasts via HTTP
-3. OFBiz calls the AI service, stores forecasts, and exposes UI + dashboard
+## What This Project Is
 
-## Quick Start (Dev)
-1. Start OFBiz (see OFBiz README for full setup).
-2. Export data:
-   - Open `https://localhost:8443/catalog/control/runDemandExport`
-3. Run AI service:
-   - `cd ai-service`
-   - `pip install -r requirements.txt`
-   - `uvicorn main:app --reload --port 8000`
-4. Forecast:
-   - `gradlew "ofbiz --script=runPredictDemand.groovy" -DproductId=WG-1111 -DhorizonDays=14`
+This is a customized OFBiz-based product, not a clean-room rewrite of Apache OFBiz.
 
-## Local Docker Dev
-Use the top-level Compose stack to run OFBiz and the AI service together.
+It contains:
 
-1. Copy `.env.example` to `.env`.
-2. Start both services:
-   - `docker-compose up --build`
-3. Open OFBiz at `https://localhost:8443/catalog/control/main`
-   - Demo login: `admin` / `ofbiz`
-4. Trigger export from OFBiz:
-   - `https://localhost:8443/catalog/control/runDemandExport`
-5. The CSV bundle is written to `ofbiz-framework/runtime/data/export/` on the host and is automatically visible to the AI service.
-6. Reload the AI service after a fresh export:
-   - `POST http://localhost:8000/reload` with header `X-API-Key: <your AI_API_KEY>`
-7. Test a forecast:
-   - `POST http://localhost:8000/predict-demand`
+- `ofbiz-framework/`
+  Customized Apache OFBiz application and UI
+- `ai-service/`
+  FastAPI demand forecasting service
+- `docs/production.md`
+  Production notes
 
-## Fresh Machine
-Fastest path from a clean machine:
+The application flow is:
 
-1. Clone the repo:
-   - `git clone https://github.com/Anish17-Shanu/ofbiz-ai-demand.git`
-2. Move into the project:
-   - `cd ofbiz-ai-demand`
-3. Start the stack:
-   - `docker-compose up --build`
+1. OFBiz exports order, product, facility, and inventory data to CSV.
+2. The AI service loads those exports and generates demand forecasts.
+3. OFBiz stores the forecast output in `DemandForecast`.
+4. Users view the results in:
+   - `Demand Forecasts`
+   - `Forecast Dashboard`
+
+## Features
+
+- OFBiz data export for forecasting
+- FastAPI forecasting API
+- OFBiz forecast persistence
+- Dashboard and forecast result views
+- Seeded six-month demo demand for local showcasing
+- Inventory-aware stock gap analysis
+
+## Prerequisites
+
+Install these on your machine:
+
+- Java 17
+- Python 3.13+ or another compatible Python 3.x version
+- Git
+
+Optional:
+
+- Docker Desktop
+- Docker Compose
+
+Helpful but not required globally:
+
+- Gradle
+- Groovy
+
+The Gradle wrapper is already included, so a global Gradle install is not required.
+
+## Quick Start From A Fresh Clone
+
+### 1. Clone the repository
+
+```powershell
+git clone https://github.com/Anish17-Shanu/ofbiz-ai-demand.git
+cd ofbiz-ai-demand
+```
+
+### 2. Set up the AI service
+
+```powershell
+cd ai-service
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+cd ..
+```
+
+### 3. Start the AI service
+
+Open terminal 1:
+
+```powershell
+cd ai-service
+.\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
+
+Health check:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/health
+```
+
+### 4. Start OFBiz
+
+Open terminal 2:
+
+```powershell
+cd ofbiz-framework
+$env:GRADLE_USER_HOME=(Join-Path (Split-Path (Get-Location) -Parent) '.gradle-home')
+.\gradlew.bat loadAll
+.\gradlew.bat ofbizBackground
+```
+
+After the first run, usually this is enough:
+
+```powershell
+cd ofbiz-framework
+$env:GRADLE_USER_HOME=(Join-Path (Split-Path (Get-Location) -Parent) '.gradle-home')
+.\gradlew.bat ofbizBackground
+```
+
+### 5. Open the product
+
+Open:
+
+- `https://localhost:8443/catalog/control/main`
+
+Login:
+
+- username: `admin`
+- password: `ofbiz`
+
+### 6. Generate demo forecast data
+
+Open:
+
+- `https://localhost:8443/catalog/control/demandForecasts`
 
 Then:
-- Open `https://localhost:8443/catalog/control/main`
-- Log in with `admin` / `ofbiz`
-- Open `https://localhost:8443/catalog/control/runDemandExport`
-- Reload the AI service:
-  - `Invoke-RestMethod -Method Post -Uri "http://localhost:8000/reload" -Headers @{ "X-API-Key" = "change-me" }`
-- Test the AI service:
-  - `Invoke-RestMethod "http://localhost:8000/health"`
 
-## Production Quick Start
-1. Copy `.env.example` to `.env` and set `AI_API_KEY`.
-2. Run:
-   - `docker-compose up --build`
-3. Configure OFBiz JVM properties:
-   - `-Dai.demand.url=http://ai-demand:8000`
-   - `-Dai.demand.apiKey=<your-key>`
-   - `-Dai.demand.timeoutMs=8000`
+1. Click `Export`
+2. Click `Queue Run`
+3. Refresh the page
+4. Open `Forecast Dashboard`
 
-## Render Deployment
-Use Render for the FastAPI `ai-service`, not the full OFBiz runtime.
+The export flow seeds six months of deterministic demo demand for selected real OFBiz products, so the project can be showcased immediately on a fresh machine.
 
-1. Push this repo to GitHub/GitLab.
-2. In Render, create a Blueprint from the repo so Render reads [`render.yaml`](./render.yaml).
-3. When prompted, set `AI_API_KEY`.
-4. After the service is created, open the attached disk shell path and make sure these files exist under `/data/ofbiz/runtime/data/export/`:
-   - `order_lines.csv`
-   - `products.csv`
-   - `product_facility.csv`
-   - `inventory_items.csv`
-5. Point OFBiz at Render:
-   - `-Dai.demand.url=https://<your-render-service>.onrender.com`
-   - `-Dai.demand.apiKey=<your-key>`
-   - `-Dai.demand.timeoutMs=8000`
+## Main URLs
 
-Important notes:
-- Render persistent disks are only available on paid instances, so the Blueprint uses `starter`.
-- The service starts even before data is uploaded, but `/predict-demand` returns `503` until exports are present and the model is loaded.
-- After uploading fresh CSV exports, call `POST /reload` with `X-API-Key` so the service reloads the model without a redeploy.
+- Main catalog app:
+  `https://localhost:8443/catalog/control/main`
+- Demand Forecasts:
+  `https://localhost:8443/catalog/control/demandForecasts`
+- Forecast Dashboard:
+  `https://localhost:8443/catalog/control/demandForecastDashboard`
 
-## UI
-Catalog app menu:
-- `Demand Forecasts`: `/catalog/control/demandForecasts`
-- `Forecast Dashboard`: `/catalog/control/demandForecastDashboard`
+## Stop OFBiz
 
-## Scheduled Jobs
-SeedÃ¢â‚¬â€˜initial jobs:
-- `exportDemandDataDelta` (daily)
-- `predictDemandForAllProducts` (daily)
-
-## Docs
-See `docs/production.md` for full production guidance and migration steps.
-
-## Complete Usage + Deployment Guide
-
-This section is a full, endÃ¢â‚¬â€˜toÃ¢â‚¬â€˜end guide to make the project work in dev or production.
-
-### 1) Prerequisites
-- JDK 17 (for OFBiz)
-- Python 3.11+ (for AI service)
-- Docker + Docker Compose (production or local container run)
-- A database supported by OFBiz (PostgreSQL/MySQL/etc.)
-
-### 2) OFBiz Setup (FirstÃ¢â‚¬â€˜Time)
-Follow the official OFBiz setup steps from `ofbiz-framework/README.adoc`. At minimum:
-1. Initialize Gradle wrapper:
-   - Windows: `init-gradle-wrapper`
-2. Load seed data:
-   - `gradlew cleanAll loadAll`
-3. Start OFBiz:
-   - `gradlew ofbiz`
-
-### 3) Export Data from OFBiz
-Exports land in `ofbiz-framework/runtime/data/export/`.
-
-Working local path:
-1. Start OFBiz and sign in to Catalog.
-2. Open `/catalog/control/runDemandExport`.
-3. This writes:
-   - `order_lines.csv`
-   - `products.csv`
-   - `product_facility.csv`
-   - `inventory_items.csv`
-
-### 4) Run AI Service (Dev)
-```
-cd ai-service
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+```powershell
+cd ofbiz-framework
+$env:GRADLE_USER_HOME=(Join-Path (Split-Path (Get-Location) -Parent) '.gradle-home')
+.\gradlew.bat terminateOfbiz
 ```
 
-### 5) Configure OFBiz Ã¢â€ â€™ AI Service
-Set JVM properties when starting OFBiz:
-- `-Dai.demand.url=http://localhost:8000`
-- `-Dai.demand.apiKey=<your-key>`
-- `-Dai.demand.timeoutMs=8000`
-- `-Dai.demand.batchSize=50`
+## Reload The AI Model Manually
 
-### 6) Run Forecasts
-Single product:
-```
-gradlew "ofbiz --script=runPredictDemand.groovy" -DproductId=WG-1111 -DhorizonDays=14
+If you refresh export CSVs and want to force the AI service to reload:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/reload"
 ```
 
-Batch (all products, queued):
-```
-gradlew "ofbiz --script=runtime/script/upgradeDemandForecast.groovy"
-```
+## Docker Option
 
-Or from UI:
-- Catalog app Ã¢â€ â€™ `Demand Forecasts`
-- Click `Queue Forecasts`
+If Docker Desktop is installed and running:
 
-### 7) View Results
-Catalog UI routes:
-- Forecasts: `/catalog/control/demandForecasts`
-- Dashboard: `/catalog/control/demandForecastDashboard`
-
-### 8) Production Deployment (Recommended)
-1. Create `.env` from `.env.example` and set `AI_API_KEY`.
-2. Run AI service:
-```
-docker-compose up --build
-```
-3. Configure OFBiz JVM properties:
-   - `-Dai.demand.url=http://ai-demand:8000`
-   - `-Dai.demand.apiKey=<your-key>`
-   - `-Dai.demand.timeoutMs=8000`
-4. Enable HTTPS/mTLS between OFBiz and AI service in your infrastructure.
-
-### 9) Database Migration
-Apply schema updates for new `DemandForecast` fields. Then run:
-```
-gradlew "ofbiz --script=runtime/script/upgradeDemandForecast.groovy"
+```powershell
+docker compose up --build
 ```
 
-### 10) Observability & Health
-AI service:
-- `/health`
-- `/metadata`
-- `/metrics`
-- `/evaluation?eval_days=30`
+Then open:
 
-OFBiz logs:
-- Export + forecast actions log under `AI_DEMAND` category.
+- `https://localhost:8443/catalog/control/main`
 
-### 11) Scheduled Jobs
-Seeded jobs run nightly:
-- `exportDemandDataDelta` (midnight)
-- `predictDemandForAllProducts` (00:30)
+Docker is optional. The direct Java + Python workflow above is the primary local path.
 
-### 12) Alerting
-Enable webhook alerts via JVM properties:
-- `-Dai.demand.alertWebhook=https://your-webhook`
-- `-Dai.demand.alertStockGap=1`
-- `-Dai.demand.alertTotalThreshold=0`
-- `-Dai.demand.alertIntervalHighThreshold=0`
+## Local Setup Notes
 
-### 13) Common Failure Points
-- Missing schema migration Ã¢â€ â€™ forecast writes fail.
-- AI service down Ã¢â€ â€™ OFBiz falls back to cached forecasts.
-- Wrong API key Ã¢â€ â€™ 401 errors.
-- No exports Ã¢â€ â€™ AI service loads empty data.
+- The first OFBiz startup is slower because Gradle and OFBiz initialize a lot of runtime state.
+- The AI service should be running before you queue forecasts.
+- If the UI looks stale after an update, do one hard refresh in the browser.
+- The project now includes seeded demo demand data to make local showcasing easier.
+
+## Environment and Secrets
+
+The repo includes `.env.example` for AI-service-related environment variables.
+
+Important:
+
+- do not commit real API keys
+- do not commit generated local OFBiz security keys
+- generate machine-specific security keys locally if needed
+
+## Production
+
+Production notes are here:
+
+- `docs/production.md`
+
+## Credit
+
+Project creator and author: **Anish Kumar**

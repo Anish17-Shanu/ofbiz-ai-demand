@@ -30,15 +30,16 @@ under the License.
                 <service service-name="getDemandForecastDashboard" result-map="dashboard">
                     <field-map field-name="evalDays" from-field="parameters.evalDays"/>
                 </service>
-                <set field="topGaps" from-field="dashboard.topGaps"/>
             </actions>
             <widgets>
                 <decorator-screen name="CommonCatalogDecorator" location="${parameters.mainDecoratorLocation}">
                     <decorator-section name="body">
                         <section>
                             <widgets>
-                                <include-form name="DemandForecastDashboardSummary" location="component://product/widget/catalog/DemandForecastDashboardForms.xml"/>
-                                <include-grid name="TopStockGaps" location="component://product/widget/catalog/DemandForecastDashboardForms.xml"/>
+                                <include-screen name="EventMessages" location="component://common/widget/CommonScreens.xml"/>
+                                <platform-specific>
+                                    <html><html-template location="component://product/template/catalog/DemandForecastDashboard.ftl"/></html>
+                                </platform-specific>
                             </widgets>
                         </section>
                     </decorator-section>

@@ -8,19 +8,6 @@ to you under the Apache License, Version 2.0 (the
 "License"); you may not use this file except in compliance
 with the License.  You may obtain a copy of the License at
 
-    <form name="DemandForecastActions" type="single" target="runDemandForecasts" title=""
-        header-row-style="header-row" default-table-style="basic-table">
-        <field name="daysBack" title="Days Back"><text-find/></field>
-        <field name="horizonDays" title="Horizon Days"><text-find/></field>
-        <field name="maxProducts" title="Max Products"><text-find/></field>
-        <field name="exportButton" title="Export Data" widget-style="smallSubmit">
-            <submit button-type="button" target="runDemandExport"/>
-        </field>
-        <field name="forecastButton" title="Queue Forecasts" widget-style="smallSubmit">
-            <submit button-type="button" target="runDemandForecasts"/>
-        </field>
-    </form>
-
 http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
@@ -32,6 +19,23 @@ under the License.
 -->
 <forms xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xmlns="http://ofbiz.apache.org/Widget-Form" xsi:schemaLocation="http://ofbiz.apache.org/Widget-Form http://ofbiz.apache.org/dtds/widget-form.xsd">
+
+    <form name="DemandForecastExportAction" type="single" target="runDemandExport" title=""
+        header-row-style="header-row" default-table-style="basic-table">
+        <field name="daysBack" title="Days Back"><text-find/></field>
+        <field name="exportButton" title="Export Data" widget-style="smallSubmit">
+            <submit button-type="button"/>
+        </field>
+    </form>
+
+    <form name="DemandForecastQueueAction" type="single" target="runDemandForecasts" title=""
+        header-row-style="header-row" default-table-style="basic-table">
+        <field name="horizonDays" title="Horizon Days"><text-find/></field>
+        <field name="maxProducts" title="Max Products"><text-find/></field>
+        <field name="forecastButton" title="Queue Forecasts" widget-style="smallSubmit">
+            <submit button-type="button"/>
+        </field>
+    </form>
 
     <form name="FindDemandForecasts" type="single" target="demandForecasts" title=""
         header-row-style="header-row" default-table-style="basic-table">
@@ -45,9 +49,10 @@ under the License.
         odd-row-style="alternate-row" default-table-style="basic-table hover-bar" header-row-style="header-row-2">
         <actions>
             <set field="entityName" value="DemandForecast"/>
+            <set field="inputFields.productId" from-field="parameters.productId"/>
             <set field="parameters.sortField" from-field="parameters.sortField" default-value="-runDate"/>
             <service service-name="performFind" result-map="result" result-map-list="listIt">
-                <field-map field-name="inputFields" from-field="parameters"/>
+                <field-map field-name="inputFields" from-field="inputFields"/>
                 <field-map field-name="entityName" from-field="entityName"/>
                 <field-map field-name="orderBy" from-field="parameters.sortField"/>
                 <field-map field-name="viewIndex" from-field="viewIndex"/>

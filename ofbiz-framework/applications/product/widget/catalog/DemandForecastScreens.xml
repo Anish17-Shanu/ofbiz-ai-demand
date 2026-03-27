@@ -27,21 +27,19 @@ under the License.
                 <set field="titleProperty" value="DemandForecasts"/>
                 <set field="headerItem" value="demandForecasts"/>
                 <set field="tabButtonItem" value="DemandForecasts"/>
+                <service service-name="getDemandForecastDashboard" result-map="dashboard">
+                    <field-map field-name="productId" from-field="parameters.productId"/>
+                </service>
             </actions>
             <widgets>
                 <decorator-screen name="CommonCatalogDecorator" location="${parameters.mainDecoratorLocation}">
                     <decorator-section name="body">
                         <section>
                             <widgets>
-                                <decorator-screen name="FindScreenDecorator" location="component://common/widget/CommonScreens.xml">
-                                    <decorator-section name="search-options">
-                                        <include-form name="DemandForecastActions" location="component://product/widget/catalog/DemandForecastForms.xml"/>
-                                        <include-form name="FindDemandForecasts" location="component://product/widget/catalog/DemandForecastForms.xml"/>
-                                    </decorator-section>
-                                    <decorator-section name="search-results">
-                                        <include-grid name="ListDemandForecasts" location="component://product/widget/catalog/DemandForecastForms.xml"/>
-                                    </decorator-section>
-                                </decorator-screen>
+                                <include-screen name="EventMessages" location="component://common/widget/CommonScreens.xml"/>
+                                <platform-specific>
+                                    <html><html-template location="component://product/template/catalog/DemandForecasts.ftl"/></html>
+                                </platform-specific>
                             </widgets>
                         </section>
                     </decorator-section>

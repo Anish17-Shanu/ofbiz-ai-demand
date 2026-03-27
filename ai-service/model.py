@@ -138,6 +138,9 @@ class DemandModel:
 
     def predict(self, product_id: str, horizon_days: int = 14) -> dict:
         prod = self.df_daily[self.df_daily["productId"] == product_id].copy()
+        inventory = self._inventory_for(product_id)
+        facility = self._facility_for(product_id)
+        stock_gap = max((facility.get("minimumStock", 0) - inventory.get("quantityOnHandTotal", 0)), 0)
         if prod.empty:
             return {
                 "product_id": product_id,
@@ -150,6 +153,12 @@ class DemandModel:
                 "model_version": self.metadata.model_version if self.metadata else "",
                 "data_start": self.metadata.data_start if self.metadata else "",
                 "data_end": self.metadata.data_end if self.metadata else "",
+                "on_hand": float(inventory.get("quantityOnHandTotal", 0)),
+                "available_to_promise": float(inventory.get("availableToPromiseTotal", 0)),
+                "min_stock": float(facility.get("minimumStock", 0)),
+                "reorder_qty": float(facility.get("reorderQuantity", 0)),
+                "stock_gap": float(stock_gap),
+                "forecast_method": "no_history",
             }
 
         prod = prod.sort_values("orderDate")
@@ -178,9 +187,6 @@ class DemandModel:
         low = max(avg_daily - margin, 0.0)
         high = max(avg_daily + margin, 0.0)
         total = float(avg_daily * horizon_days)
-        inventory = self._inventory_for(product_id)
-        facility = self._facility_for(product_id)
-        stock_gap = max((facility.get("minimumStock", 0) - inventory.get("quantityOnHandTotal", 0)), 0)
         return {
             "product_id": product_id,
             "avg_daily": float(avg_daily),

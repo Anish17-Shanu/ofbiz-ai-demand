@@ -5040,6 +5040,8 @@ under the License.
     <field name="runDate" type="date-time" not-null="true"/>
     <field name="source" type="short-varchar"/>
     <prim-key field="forecastId"/>
-    <relation type="one" fk-name="DF_PRD" rel-entity-name="Product" rel-field-name="productId"/>
+    <relation type="one" fk-name="DF_PRD" rel-entity-name="Product">
+      <key-map field-name="productId"/>
+    </relation>
   </entity>
 </entitymodel>

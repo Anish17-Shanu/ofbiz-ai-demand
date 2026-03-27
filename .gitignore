@@ -7,9 +7,12 @@ __pycache__/
 # FastAPI artifacts
 ai-service/.venv/
 ai-service/.pytest_cache/
+ai-service/.pytest_tmp/
+ai-service/pytest-cache-files-*/
 
 # Gradle caches
 .gradle/
+.gradle-home/
 
 # OFBiz build/runtime outputs
 ofbiz-framework/runtime/

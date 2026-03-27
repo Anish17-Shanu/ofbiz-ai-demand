@@ -6,6 +6,8 @@ import org.apache.ofbiz.base.util.UtilDateTime
 import org.apache.ofbiz.base.util.Debug
 import java.net.HttpURLConnection
 import java.sql.Date
+import java.nio.file.Files
+import java.nio.file.Paths
 
 // OFBiz Groovy services may invoke script methods with either bound variables or explicit args.
 Map predictDemandForProduct() {
@@ -32,6 +34,7 @@ Map predictDemandForProducts(DispatchContext dctx, Map context) {
         return [responseMessage: "error", errorMessage: "No productIds provided"]
     }
 
+    reloadAiModelIfAvailable()
     Integer batchSize = Integer.getInteger("ai.demand.batchSize", 50)
     List results = []
     productIds.collate(batchSize).each { chunk ->
@@ -67,12 +70,14 @@ Map predictDemandForAllProducts(DispatchContext dctx, Map context) {
     Delegator delegator = dctx.delegator
     def now = UtilDateTime.nowTimestamp()
 
+    Set<String> exportProductIds = loadExportProductIds()
     def products = org.apache.ofbiz.entity.util.EntityQuery.use(delegator)
             .from("Product")
             .where("isVirtual", "N")
             .queryList()
             .findAll { p ->
-                !p.salesDiscontinuationDate || p.salesDiscontinuationDate.after(now)
+                (!p.salesDiscontinuationDate || p.salesDiscontinuationDate.after(now)) &&
+                        (exportProductIds.isEmpty() || exportProductIds.contains(p.productId as String))
             }
             .take(maxProducts)
             .collect { it.productId }
@@ -138,6 +143,72 @@ private Map doPredict(DispatchContext dctx, Map context) {
 
 private Map serviceError(String msg) {
     return [responseMessage: "error", errorMessage: msg]
+}
+
+private void reloadAiModelIfAvailable() {
+    String baseUrl = System.getProperty("ai.demand.url", "http://localhost:8000")
+    String apiKey = System.getProperty("ai.demand.apiKey", "")
+    Integer timeoutMs = Integer.getInteger("ai.demand.timeoutMs", 5000)
+
+    try {
+        def url = new URL(baseUrl + "/reload")
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection()
+        conn.setRequestMethod("POST")
+        conn.setDoOutput(true)
+        conn.setConnectTimeout(timeoutMs)
+        conn.setReadTimeout(timeoutMs)
+        if (apiKey) {
+            conn.setRequestProperty("X-API-Key", apiKey)
+        }
+        conn.responseCode
+    } catch (Throwable t) {
+        Debug.logWarning("AI reload skipped: ${t.message}", "AI_DEMAND")
+    }
+}
+
+private Set<String> loadExportProductIds() {
+    try {
+        def path = Paths.get("runtime", "data", "export", "order_lines.csv")
+        if (!Files.exists(path)) {
+            return [] as Set<String>
+        }
+        def lines = Files.readAllLines(path)
+        if (lines.size() <= 1) {
+            return [] as Set<String>
+        }
+        return lines.drop(1)
+                .collect { parseCsvLine(it) }
+                .findAll { cols -> cols.size() >= 3 && cols[2] }
+                .collect { cols -> cols[2].replace('"', '') }
+                .toSet()
+    } catch (Throwable t) {
+        Debug.logWarning("Could not read export order_lines.csv: ${t.message}", "AI_DEMAND")
+        return [] as Set<String>
+    }
+}
+
+private List<String> parseCsvLine(String line) {
+    List<String> cols = []
+    StringBuilder current = new StringBuilder()
+    boolean inQuotes = false
+    for (int i = 0; i < line.length(); i++) {
+        char ch = line.charAt(i)
+        if (ch == '"' as char) {
+            if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"' as char) {
+                current.append('"')
+                i++
+            } else {
+                inQuotes = !inQuotes
+            }
+        } else if (ch == ',' as char && !inQuotes) {
+            cols << current.toString()
+            current.setLength(0)
+        } else {
+            current.append(ch)
+        }
+    }
+    cols << current.toString()
+    return cols
 }
 
 private DispatchContext resolveDispatchContext() {

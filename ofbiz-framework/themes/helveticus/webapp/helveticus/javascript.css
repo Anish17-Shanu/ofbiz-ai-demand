@@ -20,8 +20,6 @@
 /* ----------------------------------------------------------------------- */
 /* This CSS file is used for the Flat Grey visual theme JavaScript styles. */
 /* ----------------------------------------------------------------------- */
-@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
-
 #wait-spinner {
     z-index: 50000;
     position: absolute;

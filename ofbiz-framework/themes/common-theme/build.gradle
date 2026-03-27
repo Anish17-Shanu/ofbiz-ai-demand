@@ -24,3 +24,7 @@ plugins {
 node {
     nodeProjectDir = file('webapp/common-theme/js')
 }
+
+tasks.withType(com.github.gradle.node.npm.task.NpmInstallTask).configureEach {
+    doNotTrackState("Windows npm shim files in node_modules/.bin are not regular files and break Gradle snapshotting.")
+}

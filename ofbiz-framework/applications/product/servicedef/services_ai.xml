@@ -88,12 +88,24 @@
     <service name="getDemandForecastDashboard"
              engine="groovy" location="component://product/groovy/ai/DemandForecastDashboard.groovy"
              invoke="getDemandForecastDashboard" auth="true" export="true">
+      <attribute name="productId" mode="IN" type="String" optional="true"/>
       <attribute name="evalDays" mode="IN" type="Integer" optional="true"/>
       <attribute name="forecastCount" mode="OUT" type="Long"/>
-      <attribute name="lastRunDate" mode="OUT" type="Timestamp"/>
+      <attribute name="lastRunDate" mode="OUT" type="Timestamp" optional="true"/>
       <attribute name="avgStockGap" mode="OUT" type="Double"/>
       <attribute name="maxStockGap" mode="OUT" type="Double"/>
-      <attribute name="evaluation" mode="OUT" type="Map"/>
-      <attribute name="topGaps" mode="OUT" type="List"/>
+      <attribute name="accuracyScore" mode="OUT" type="Double" optional="true"/>
+      <attribute name="metrics" mode="OUT" type="Map" optional="true"/>
+      <attribute name="riskLanes" mode="OUT" type="Map" optional="true"/>
+      <attribute name="methodMix" mode="OUT" type="List" optional="true"/>
+      <attribute name="evaluation" mode="OUT" type="Map" optional="true"/>
+      <attribute name="topGaps" mode="OUT" type="List" optional="true"/>
+      <attribute name="topDemand" mode="OUT" type="List" optional="true"/>
+      <attribute name="latestRows" mode="OUT" type="List" optional="true"/>
+      <attribute name="noHistoryRows" mode="OUT" type="List" optional="true"/>
+      <attribute name="productFilter" mode="OUT" type="String" optional="true"/>
+      <attribute name="demandChart" mode="OUT" type="List" optional="true"/>
+      <attribute name="gapChart" mode="OUT" type="List" optional="true"/>
+      <attribute name="timelineChart" mode="OUT" type="List" optional="true"/>
     </service>
 </services>

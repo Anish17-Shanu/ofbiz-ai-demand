@@ -35,6 +35,7 @@ import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilFormatOut;
 import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilHttp;
+import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.entity.Delegator;
 
 /**
@@ -135,7 +136,10 @@ public class OfbizNumberTransform implements TemplateTransformModel {
                             localeObj = env.getLocale();
                         }
                     } else {
-                        localeObj = new Locale(locale);
+                        localeObj = UtilMisc.parseLocale(locale);
+                        if (localeObj == null) {
+                            localeObj = Locale.getDefault();
+                        }
                     }
                     out.write(UtilFormatOut.formatNumber(number, format, delegator, localeObj));
                 } catch (TemplateModelException e) {

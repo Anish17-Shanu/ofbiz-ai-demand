@@ -766,7 +766,10 @@ public final class UtilProperties implements Serializable {
         int pos = localeString.lastIndexOf("_", localeString.length());
         while (pos != -1) {
             localeString = localeString.substring(0, pos);
-            localeList.add(new Locale(localeString));
+            Locale candidateLocale = UtilMisc.parseLocale(localeString);
+            if (candidateLocale != null) {
+                localeList.add(candidateLocale);
+            }
             pos = localeString.lastIndexOf("_", localeString.length());
         }
         return localeList;

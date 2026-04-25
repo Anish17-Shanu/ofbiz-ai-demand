@@ -30,6 +30,7 @@ import org.apache.ofbiz.base.util.Debug;
 import org.apache.ofbiz.base.util.UtilFormatOut;
 import org.apache.ofbiz.base.util.UtilGenerics;
 import org.apache.ofbiz.base.util.UtilHttp;
+import org.apache.ofbiz.base.util.UtilMisc;
 import org.apache.ofbiz.base.util.UtilValidate;
 import org.apache.ofbiz.entity.Delegator;
 import org.apache.ofbiz.entity.util.EntityUtilProperties;
@@ -192,7 +193,9 @@ public class OfbizCurrencyTransform implements TemplateTransformModel {
                             // we set the max to 10 digits as an hack to not round numbers in the ui
                         }
                     } else {
-                        out.write(UtilFormatOut.formatCurrency(amount, isoCode, new Locale(locale), rounding));
+                        Locale localeObj = UtilMisc.parseLocale(locale);
+                        out.write(UtilFormatOut.formatCurrency(amount, isoCode,
+                                localeObj != null ? localeObj : Locale.getDefault(), rounding));
                         // we set the max to 10 digits as an hack to not round numbers in the ui
                     }
                 } catch (TemplateModelException e) {

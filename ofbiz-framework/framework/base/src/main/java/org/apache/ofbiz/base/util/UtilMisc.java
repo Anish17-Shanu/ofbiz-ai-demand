@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IllformedLocaleException;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -569,7 +570,12 @@ public final class UtilMisc {
             String language = localeString.substring(0, 2);
             String country = localeString.substring(3, 5);
             String extension = localeString.substring(6);
-            locale = new Locale(language, country, extension);
+            try {
+                locale = new Locale.Builder().setLanguage(language).setRegion(country).setVariant(extension).build();
+            } catch (IllformedLocaleException e) {
+                Debug.logWarning("Could not build locale variant [" + localeString + "] with Locale.Builder, using legacy locale handling.", MODULE);
+                locale = Locale.of(language, country, extension);
+            }
         } else {
             Debug.logWarning("Do not know what to do with the localeString [" + localeString + "], should be length 2, 5, or greater than 6, "
                     + "returning null", MODULE);
